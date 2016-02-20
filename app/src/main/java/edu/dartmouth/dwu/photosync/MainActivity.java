@@ -1,8 +1,13 @@
 package edu.dartmouth.dwu.photosync;
 
+import android.Manifest;
+import android.app.Activity;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Environment;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -16,6 +21,7 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.drive.Drive;
 import com.google.android.gms.drive.DriveApi;
+import com.google.android.gms.drive.DriveContents;
 import com.google.android.gms.drive.DriveFile;
 import com.google.android.gms.drive.DriveFolder;
 import com.google.android.gms.drive.DriveId;
@@ -24,11 +30,21 @@ import com.google.android.gms.drive.OpenFileActivityBuilder;
 
 import com.google.android.gms.drive.DriveApi.DriveContentsResult;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.util.ArrayList;
+import java.util.List;
+
 
 public class MainActivity extends AppCompatActivity implements
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener {
-
     private static final String TAG = "MainActivity";
 
     protected GoogleApiClient mGoogleApiClient;
@@ -66,28 +82,6 @@ public class MainActivity extends AppCompatActivity implements
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
     }
 
     @Override
@@ -163,29 +157,67 @@ public class MainActivity extends AppCompatActivity implements
                 Log.d(TAG,"Cannot find DriveId. Are you authorized to view this file?");
                 return;
             }
-            mFolderDriveId = result.getDriveId();
-            Drive.DriveApi.newDriveContents(mGoogleApiClient)
-                    .setResultCallback(driveContentsCallback);
+
+            // get files
+            String path = Environment.getExternalStorageDirectory().toString() + "/DCIM/Camera";
+            File dir = new File(path);
+            File files[] = dir.listFiles();
+
+            for (final File f : files) {
+                if (f.getName().endsWith(".jpg")) {
+                    mFolderDriveId = result.getDriveId();
+                    Drive.DriveApi.newDriveContents(mGoogleApiClient).setResultCallback(
+                        new ResultCallback<DriveContentsResult>() {
+                            @Override
+                            public void onResult(DriveContentsResult result) {
+                                if (!result.getStatus().isSuccess()) {
+                                    Log.d(TAG, "Error while trying to create new file contents");
+                                    return;
+                                }
+
+                                final DriveContents driveContents = result.getDriveContents();
+                                OutputStream outputStream = driveContents.getOutputStream();
+
+
+                                byte[] buf = new byte[8192];
+                                InputStream is = null;
+                                try {
+                                    is = new FileInputStream(f);
+                                } catch (FileNotFoundException e) {
+                                    Log.d(TAG, "File not found! " + e);
+                                }
+
+                                // write content to DriveContents
+                                try {
+                                    int c = 0;
+                                    while ((c = is.read(buf, 0, buf.length)) > 0) {
+                                        outputStream.write(buf, 0, c);
+                                        outputStream.flush();
+                                    }
+                                } catch (IOException e) {
+                                    Log.e(TAG, e.getMessage());
+                                } finally {
+                                    try {
+                                        outputStream.close();
+                                    } catch (Exception e) {
+
+                                    }
+                                }
+
+                                DriveFolder folder = sFolderId.asDriveFolder();
+                                MetadataChangeSet changeSet = new MetadataChangeSet.Builder()
+                                        .setTitle(f.getName())
+                                        .setMimeType("image/jpg")
+                                        .setStarred(true).build();
+                                folder.createFile(mGoogleApiClient, changeSet, driveContents)
+                                        .setResultCallback(fileCallback);
+                            }
+                        }
+                    );
+                }
+            }
         }
     };
-
-    final private ResultCallback<DriveContentsResult> driveContentsCallback =
-            new ResultCallback<DriveContentsResult>() {
-                @Override
-                public void onResult(DriveContentsResult result) {
-                    if (!result.getStatus().isSuccess()) {
-                        Log.d(TAG,"Error while trying to create new file contents");
-                        return;
-                    }
-                    DriveFolder folder = sFolderId.asDriveFolder();
-                    MetadataChangeSet changeSet = new MetadataChangeSet.Builder()
-                            .setTitle("New file")
-                            .setMimeType(MIME_TYPE_IMAGE)
-                            .setStarred(true).build();
-                    folder.createFile(mGoogleApiClient, changeSet, result.getDriveContents())
-                            .setResultCallback(fileCallback);
-                }
-            };
 
     final private ResultCallback<DriveFolder.DriveFileResult> fileCallback = new
             ResultCallback<DriveFolder.DriveFileResult>() {
