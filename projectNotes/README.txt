@@ -14,7 +14,8 @@ Install time:
 	Create file of already uploaded images
 
 Runtime:
-	Every time a picture is taken, upload to google drive (if file hasn't already been uploaded)
+	Every time a picture is taken (register broadcast receiver?),
+	 	upload to google drive (if file hasn't already been uploaded)
 	Upon deletion of picture in google drive, delete photo off phone
 
 

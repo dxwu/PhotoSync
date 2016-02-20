@@ -37,10 +37,11 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Write file"
-        android:id="@+id/button2"
-        android:layout_alignTop="@+id/textView1"
-        android:layout_alignLeft="@+id/textView1"
-        android:layout_alignStart="@+id/textView1"
-        android:onClick="writeFile"/>
+        android:text="Apply Deletions"
+        android:id="@+id/deleteButton"
+        android:layout_below="@+id/textView1"
+        android:layout_alignRight="@+id/button1"
+        android:layout_alignEnd="@+id/button1"
+        android:onClick="applyDeletions"/>
+
 </RelativeLayout>

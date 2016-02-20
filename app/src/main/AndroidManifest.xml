@@ -16,19 +16,40 @@
             android:name=".MainActivity"
             android:label="@string/app_name"
             android:theme="@style/AppTheme.NoActionBar">
-            <meta-data android:name="com.google.android.apps.drive.APP_ID" android:value="id=120945267267" />
+            <meta-data
+                android:name="com.google.android.apps.drive.APP_ID"
+                android:value="id=120945267267" />
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
+
                 <action android:name="com.google.android.apps.drive.DRIVE_OPEN" />
+
                 <data android:mimeType="application/vnd.google-apps.drive-sdk.120945267267" />
                 <data android:mimeType="image/png" />
                 <data android:mimeType="image/jpeg" />
                 <data android:mimeType="image/jpg" />
             </intent-filter>
         </activity>
+
+        <receiver
+            android:name=".CameraReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter android:priority="10000">
+                <!--<action android:name="android.intent.action.CAMERA_BUTTON" />-->
+                <!--<action android:name="com.android.camera.NEW_PICTURE" />-->
+                <action android:name="android.hardware.action.NEW_PICTURE" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="image/*" />
+            </intent-filter>
+        </receiver>
+
+        <class android:name=".CameraReceiver"></class>
     </application>
 
 </manifest>
